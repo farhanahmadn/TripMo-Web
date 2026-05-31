@@ -22,7 +22,7 @@
 /storage/framework/cache
 /storage/framework/sessions
 /storage/framework/views
-/vendor
+# /vendor — dicommit untuk Vercel deployment
 Homestead.json
 Homestead.yaml
 Thumbs.db
