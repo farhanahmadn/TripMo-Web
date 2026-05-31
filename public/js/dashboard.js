@@ -1,25 +1,32 @@
 // PETA
-const map = L.map('main-map', { center: [-6.9, 107.6], zoom: 13 });
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
+const map = L.map('main-map', {
+    center: [-6.9, 107.6], zoom: 13,
+    zoomControl: false
+});
+
+// Tile Stadia Alidade Smooth Dark — dark mode nyaman, mirip Mapbox
+L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 20
 }).addTo(map);
 
-// Klik peta 
+// Zoom control di kiri bawah
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// Klik peta — pin modern
 let pinAktif = null;
 const pinIkon = L.divIcon({
-    html: `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
-        <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#e8410a"/>
-        <circle cx="14" cy="14" r="6" fill="white"/>
-    </svg>`,
-    iconSize: [28,36], iconAnchor: [14,36], popupAnchor: [0,-38], className: ''
+    html: `<div style="
+        position:relative;width:20px;height:20px;
+        background:#7c5cfc;border:3px solid white;border-radius:50%;
+        box-shadow:0 0 0 4px rgba(124,92,252,.3),0 4px 12px rgba(0,0,0,.5)">
+    </div>`,
+    iconSize: [20,20], iconAnchor: [10,10], popupAnchor: [0,-14], className: ''
 });
 
 map.on('click', function(e) {
     if (pinAktif) map.removeLayer(pinAktif);
-    pinAktif = L.marker(e.latlng, { icon: pinIkon })
-        .addTo(map)
-        .bindPopup(`📍 ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`)
-        .openPopup();
+    pinAktif = L.marker(e.latlng, { icon: pinIkon }).addTo(map);
 });
 
 
@@ -303,19 +310,32 @@ function updatePeta() {
     if (dests.length === 0) return;
 
     const titik = dests.map(d => [d.lat, d.lng]);
-    ruteLayer = L.polyline(titik, { color: '#7c5cfc', weight: 3, dashArray: '8 4' }).addTo(map);
+
+    // Shadow + garis utama — warna cerah agar kontras di dark tile
+    if (titik.length > 1) {
+        const shadow = L.polyline(titik, { color: '#818cf8', weight: 10, opacity: 0.18 }).addTo(map);
+        shadow._tripmo = true;
+        ruteLayer = L.polyline(titik, { color: '#818cf8', weight: 3.5, opacity: 1 }).addTo(map);
+    }
 
     dests.forEach((d, i) => {
-        const warna = i === 0 ? '#7c5cfc' : (i === dests.length-1 ? '#7c5cfc' : '#6366f1');
-        const ikon = L.divIcon({
-            html: `<div style="width:26px;height:26px;background:${warna};border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">${i+1}</div>`,
-            iconSize: [26,26], iconAnchor: [13,13], className: ''
+        const isEnd = i === 0 || i === dests.length - 1;
+        const warna = isEnd ? '#a78bfa' : '#818cf8';
+        const glow  = isEnd ? 'rgba(167,139,250,.5)' : 'rgba(129,140,248,.4)';
+        const ikon  = L.divIcon({
+            html: `<div style="
+                width:28px;height:28px;background:${warna};
+                border:2.5px solid rgba(255,255,255,.9);border-radius:50%;
+                display:flex;align-items:center;justify-content:center;
+                font-size:11px;font-weight:700;color:white;
+                box-shadow:0 0 0 4px ${glow},0 4px 14px rgba(0,0,0,.6)">${i + 1}</div>`,
+            iconSize: [28,28], iconAnchor: [14,14], className: ''
         });
-        const m = L.marker([d.lat, d.lng], { icon: ikon }).addTo(map).bindPopup(`<b>${d.name}</b>`);
+        const m = L.marker([d.lat, d.lng], { icon: ikon }).addTo(map);
         m._tripmo = true;
     });
 
-    if (titik.length > 1) map.fitBounds(titik, { padding: [40,40] });
+    if (titik.length > 1) map.fitBounds(titik, { padding: [60, 60] });
     else map.setView(titik[0], 13);
 }
 

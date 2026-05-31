@@ -18,7 +18,7 @@
 
         {{-- Foto --}}
         <div class="foto-header">
-    <a href="{{ route('dashboard') }}" class="btn-kembali">Kembali</a>
+    <a href="{{ route('dashboard') }}" class="btn-kembali">✕</a>
 
     @if($post->photos->count() > 0)
         <div class="foto-slider" id="fotoSlider">
@@ -137,59 +137,179 @@
 
 @push('scripts')
 <script>
+/* ── Rating bintang ── */
 function setStar(val) {
     document.getElementById('scoreVal').value = val;
-    document.querySelectorAll('#stars .star-btn').forEach((b,i) => {
+    document.querySelectorAll('#stars .star-btn').forEach((b, i) => {
         b.style.color = i < val ? '#fbbf24' : 'rgba(255,255,255,.2)';
     });
 }
 
-const detailMap = L.map('detail-map');
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
+/* ── Inisialisasi peta ── */
+const detailMap = L.map('detail-map', { zoomControl: false });
+
+// Tile Stadia Alidade Smooth Dark — dark mode nyaman, mirip Mapbox
+L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 20
 }).addTo(detailMap);
 
-const dests = @json($dests);
-const markers = [];
+L.control.zoom({ position: 'topright' }).addTo(detailMap);
 
-if (dests.length > 0) {
-    const titik = dests.map(d => [d.lat, d.lng]);
-    L.polyline(titik, { color:'#7c5cfc', weight:3, dashArray:'8 4' }).addTo(detailMap);
-    dests.forEach((d, i) => {
-        const w = i===0 ? '#7c5cfc' : (i===dests.length-1 ? '#e8410a' : '#6366f1');
-        const ikon = L.divIcon({
-            html: `<div style="width:28px;height:28px;background:${w};border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">${i+1}</div>`,
-            iconSize:[28,28], iconAnchor:[14,14], className:''
-        });
-        const m = L.marker([d.lat, d.lng], {icon:ikon}).addTo(detailMap).bindPopup(`<b>${d.name}</b>`);
-        markers.push(m);
+const dests       = @json($dests);
+const markers     = [];
+let   routeLayer  = null;   // layer polyline rute aktif
+
+/* Buat marker bernomor */
+function buatMarker(d, i) {
+    const isEndpoint = i === 0 || i === dests.length - 1;
+    const warna  = isEndpoint ? '#a78bfa' : '#818cf8';
+    const glow   = isEndpoint ? 'rgba(167,139,250,.5)' : 'rgba(129,140,248,.4)';
+    const ikon   = L.divIcon({
+        html: `<div style="
+            width:30px;height:30px;background:${warna};
+            border:2.5px solid rgba(255,255,255,.9);border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:11px;font-weight:700;color:white;
+            box-shadow:0 0 0 4px ${glow},0 4px 14px rgba(0,0,0,.6)">${i + 1}</div>`,
+        iconSize: [30, 30], iconAnchor: [15, 15], className: ''
     });
-    titik.length > 1 ? detailMap.fitBounds(titik, {padding:[40,40]}) : detailMap.setView(titik[0], 13);
+    return L.marker([parseFloat(d.lat), parseFloat(d.lng)], { icon: ikon }).addTo(detailMap);
+}
+
+/* Hitung jarak lurus antar dua titik (km) — Haversine */
+function jarakLurus(a, b) {
+    const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180,
+          dLng = (b.lng - a.lng) * Math.PI / 180,
+          x = Math.sin(dLat/2)**2 +
+              Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+function totalJarakLurus(destList) {
+    let total = 0;
+    for (let i = 0; i < destList.length - 1; i++) total += jarakLurus(destList[i], destList[i+1]);
+    return total;
+}
+
+/* Gambar rute — profil foot (berjalan/pendakian), fallback cerdas */
+async function gambarRute(destList) {
+    if (routeLayer) {
+        if (Array.isArray(routeLayer)) { routeLayer.forEach(l => detailMap.removeLayer(l)); }
+        else detailMap.removeLayer(routeLayer);
+        routeLayer = null;
+    }
+    if (destList.length < 2) return;
+
+    const coords   = destList.map(d => `${parseFloat(d.lng)},${parseFloat(d.lat)}`).join(';');
+    const lurusKm  = totalJarakLurus(destList);
+
+    try {
+        /* Coba profil foot (jalan kaki / hiking) */
+        const res  = await fetch(
+            `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`
+        );
+        const data = await res.json();
+
+        if (data.code !== 'Ok' || !data.routes.length) throw new Error('no-route');
+
+        const osrmKm = data.routes[0].distance / 1000;
+        const rasio  = osrmKm / lurusKm;
+
+        if (rasio > 3.5) {
+            /* Rute terlalu memutar (misal: antar pulau / jalur pendakian off-road)
+               → tampilkan garis estimasi dengan indikator */
+            gambarGarisEstimasi(destList);
+            tampilBadgeEstimasi();
+        } else {
+            /* Rute normal: shadow + garis utama */
+            const shadow = L.geoJSON(data.routes[0].geometry, {
+                style: { color: '#4f46e5', weight: 9, opacity: 0.18 }
+            }).addTo(detailMap);
+            const line   = L.geoJSON(data.routes[0].geometry, {
+                style: { color: '#6366f1', weight: 4, opacity: 0.95 }
+            }).addTo(detailMap);
+            routeLayer = [shadow, line];
+            sembunyikanBadgeEstimasi();
+        }
+    } catch (e) {
+        gambarGarisEstimasi(destList);
+        tampilBadgeEstimasi();
+    }
+}
+
+function gambarGarisEstimasi(destList) {
+    const titik  = destList.map(d => [parseFloat(d.lat), parseFloat(d.lng)]);
+    const shadow = L.polyline(titik, { color: '#f59e0b', weight: 8, opacity: 0.15 }).addTo(detailMap);
+    const line   = L.polyline(titik, {
+        color: '#f59e0b', weight: 3, opacity: 0.85, dashArray: '10 6'
+    }).addTo(detailMap);
+    routeLayer = [shadow, line];
+}
+
+function tampilBadgeEstimasi() {
+    let badge = document.getElementById('routeBadge');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'routeBadge';
+        badge.style.cssText = `
+            position:absolute; bottom:14px; left:14px; z-index:500;
+            background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4);
+            color:#fbbf24; font-size:11px; font-weight:600; padding:6px 12px;
+            border-radius:20px; backdrop-filter:blur(8px); pointer-events:none;`;
+        badge.textContent = '〰 Jalur estimasi (off-road / pendakian)';
+        document.querySelector('.show-map').appendChild(badge);
+    }
+    badge.style.display = 'block';
+}
+
+function sembunyikanBadgeEstimasi() {
+    const badge = document.getElementById('routeBadge');
+    if (badge) badge.style.display = 'none';
+}
+
+/* Inisialisasi marker + rute */
+if (dests.length > 0) {
+    const validDests = dests.filter(d => d && d.lat && d.lng);
+
+    validDests.forEach((d, i) => markers.push(buatMarker(d, i)));
+
+    if (validDests.length > 1) {
+        gambarRute(validDests).then(() => {
+            /* Fit bounds setelah rute ter-render */
+            const titik = validDests.map(d => [parseFloat(d.lat), parseFloat(d.lng)]);
+            detailMap.fitBounds(titik, { padding: [60, 60] });
+        });
+    } else {
+        detailMap.setView([parseFloat(validDests[0].lat), parseFloat(validDests[0].lng)], 14);
+    }
 } else {
     detailMap.setView([-6.9, 107.6], 12);
 }
 
+/* Fokus ke titik saat item rute diklik */
 function focusMap(i) {
-    document.querySelectorAll('.rute-item').forEach((el,j) => el.classList.toggle('active', i===j));
+    document.querySelectorAll('.rute-item').forEach((el, j) => el.classList.toggle('active', i === j));
     const d = dests[i];
-    detailMap.setView([d.lat, d.lng], 15);
-    markers[i].openPopup();
+    if (!d || !d.lat || !d.lng) return;
+    detailMap.setView([parseFloat(d.lat), parseFloat(d.lng)], 15);
+    if (markers[i]) markers[i].openPopup();
 }
 
-// Slider foto
+/* ── Slider foto ── */
 let slideIndex = 0;
-const slides = document.querySelectorAll('.foto-slide');
-const dots = document.querySelectorAll('.slider-dot');
+const slides   = document.querySelectorAll('.foto-slide');
+const dots     = document.querySelectorAll('.slider-dot');
 
 function goSlide(n) {
     slideIndex = n;
-    document.getElementById('fotoSlider').style.transform = `translateX(-${slideIndex * 100}%)`;
+    const slider = document.getElementById('fotoSlider');
+    if (slider) slider.style.transform = `translateX(-${slideIndex * 100}%)`;
     dots.forEach((d, i) => d.classList.toggle('active', i === slideIndex));
 }
 
 function slidePhoto(dir) {
-    slideIndex = (slideIndex + dir + slides.length) % slides.length;
-    goSlide(slideIndex);
+    goSlide((slideIndex + dir + slides.length) % slides.length);
 }
 </script>
 @endpush
