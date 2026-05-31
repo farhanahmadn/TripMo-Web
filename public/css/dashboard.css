@@ -1,14 +1,27 @@
 :root { --purple: #7c5cfc; }
 
 /* Layout */
-.dash-wrap { position: relative; height: calc(100vh - 56px); overflow: hidden; }
+.dash-wrap { position: relative; height: calc(100vh); overflow: hidden; }
 #main-map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
 
-/* Bottom Bar */
+/* Bottom Bar — default bawah tengah */
 .bottom-bar {
-    position: absolute; bottom: 28px; left: 50%;
-    transform: translateX(-50%); z-index: 500;
-    display: flex; align-items: center; gap: 10px;
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: left .28s cubic-bezier(.4,0,.2,1),
+                transform .28s cubic-bezier(.4,0,.2,1);
+}
+
+/* Saat panel terbuka: geser ke tengah area map (kanan panel 500px) */
+.side-panel.open ~ .bottom-bar {
+    left: calc(500px + (100vw - 500px) / 2);
+    transform: translateX(-50%);
 }
 
 .bar-capsule {
@@ -66,9 +79,9 @@
 }
 .pp-name { font-size: 16px; font-weight: 700; color: white; margin-bottom: 3px; }
 .pp-handle { font-size: 13px; color: rgba(255,255,255,0.4); }
-.pp-stats { display: flex; gap: 24px; margin-bottom: 18px; }
-.pp-stat-num { display: block; font-size: 24px; font-weight: 800; color: white; line-height: 1; margin-bottom: 4px; }
-.pp-stat-label { font-size: 12px; color: rgba(255,255,255,0.4); }
+.pp-stats { display: flex; gap: 24px; margin-bottom: 18px; justify-content: center; }
+.pp-stat-num { display: block; font-size: 24px; font-weight: 800; color: white; line-height: 1; margin-bottom: 4px; text-align: center; }
+.pp-stat-label { font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; }
 .pp-btns { display: flex; gap: 8px; margin-bottom: 20px; }
 .pp-btn {
     flex: 1; padding: 9px 10px; border-radius: 100px;
@@ -128,12 +141,49 @@
     font-family: monospace; pointer-events: none;
 }
 
-/* Leaflet overrides */
-.leaflet-control-zoom { border: 1px solid rgba(255,255,255,0.15) !important; border-radius: 12px !important; overflow: hidden; }
-.leaflet-control-zoom a { background: rgba(24,24,24,0.85) !important; color: white !important; border-bottom-color: rgba(255,255,255,0.1) !important; width: 32px !important; height: 32px !important; line-height: 32px !important; }
-.leaflet-control-zoom a:hover { background: rgba(50,50,50,0.9) !important; }
-.leaflet-popup-content-wrapper { border-radius: 12px !important; }
-.leaflet-popup-tip-container { display: none; }
+/* Leaflet overrides — dark mode nyaman */
+.leaflet-control-zoom {
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4) !important;
+}
+.leaflet-control-zoom a {
+    background: rgba(30,32,44,0.92) !important;
+    color: rgba(255,255,255,.8) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+    width: 34px !important; height: 34px !important; line-height: 34px !important;
+    font-size: 18px !important;
+    transition: background .15s, color .15s !important;
+}
+.leaflet-control-zoom a:hover { background: rgba(124,92,252,.4) !important; color: white !important; }
+.leaflet-control-zoom-in  { border-radius: 12px 12px 0 0 !important; }
+.leaflet-control-zoom-out { border-radius: 0 0 12px 12px !important; border-bottom: none !important; }
+
+.leaflet-popup-content-wrapper {
+    background: rgba(22,24,35,0.97) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,.55) !important;
+    padding: 0 !important;
+}
+.leaflet-popup-content {
+    margin: 10px 14px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 13px !important; color: rgba(255,255,255,.88) !important;
+    line-height: 1.5 !important;
+}
+.leaflet-popup-tip { background: rgba(22,24,35,0.97) !important; }
+.leaflet-popup-close-button { color: rgba(255,255,255,.35) !important; top: 7px !important; right: 9px !important; font-size: 16px !important; }
+.leaflet-popup-close-button:hover { color: rgba(255,255,255,.8) !important; }
+
+.leaflet-control-attribution {
+    background: rgba(15,16,24,.7) !important;
+    backdrop-filter: blur(8px);
+    border-radius: 6px 0 0 0 !important;
+    font-size: 10px !important; color: rgba(255,255,255,.35) !important;
+    border: none !important; padding: 3px 8px !important;
+}
+.leaflet-control-attribution a { color: #a78bfa !important; }
 
 
 .p-label { font-size:11px; font-weight:600; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
@@ -166,6 +216,11 @@
 
 .dest-saran { padding:10px 14px; cursor:pointer; font-size:13px; color:rgba(255,255,255,.75); border-bottom:1px solid rgba(255,255,255,.05); }
 .dest-saran:hover { background:rgba(124,92,252,.2); }
+
+/* Grid foto profil */
+[style*="grid-template-columns: repeat(2"] > a:hover {
+    transform: scale(1.04) !important;
+}
 
 /* Scrollbar */
 .side-panel::-webkit-scrollbar { width: 4px; }
