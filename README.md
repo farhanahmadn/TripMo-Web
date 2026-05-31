@@ -23,7 +23,7 @@ TripMo memudahkan pengguna merekam rekam jejak perjalanan yang sudah selesai dal
 - **Frontend**: Blade Templates, CSS, JavaScript
 - **Mobile**: Flutter (Dart)
 - **Database**: MySQL
-- **Peta**: Leaflet.js + OpenStreetMap + Nominatim
+- **Peta**: Leaflet.js + OpenStreetMap 
 
 ## Instalasi
 
