@@ -14,6 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // Daftarkan API routes secara EKSPLISIT (lebih andal di serverless
         // dibanding parameter `api:` yang bisa terlewat jika deteksi gagal).
         then: function () {
+            // DIAGNOSTIK: route inline (tanpa file) untuk cek apakah `then` jalan
+            Route::middleware('api')->get('mobile/inline-test', function () {
+                return response()->json([
+                    'then_ran'        => true,
+                    'api_file_exists' => file_exists(base_path('routes/api.php')),
+                    'api_file_path'   => base_path('routes/api.php'),
+                ]);
+            });
+
             Route::middleware('api')
                 ->prefix('mobile')
                 ->group(base_path('routes/api.php'));
