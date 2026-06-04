@@ -8,17 +8,6 @@ define('LARAVEL_START', microtime(true));
 |--------------------------------------------------------------------------
 */
 
-/* DEBUG SEMENTARA */
-if (str_contains($_SERVER['REQUEST_URI'] ?? '', 'whatami')) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? null,
-        'PATH_INFO'   => $_SERVER['PATH_INFO'] ?? null,
-        'SCRIPT_NAME' => $_SERVER['SCRIPT_NAME'] ?? null,
-    ], JSON_PRETTY_PRINT);
-    exit;
-}
-
 /* 1. HTTPS dari proxy Vercel (TLS diterminasi di edge). */
 if (
     (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
