@@ -40,7 +40,10 @@
 .foto-header-grid a { display:block; height:100%; overflow:hidden; }
 .foto-header-grid a img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .3s; }
 .foto-header-grid a:hover img { transform:scale(1.03); }
-#detail-map { width:100%; height:100%; }
+#detail-map { width:100%; height:100%; background:#1a1d29; }
+
+/* Map tiles — angkat kecerahan agar jalan & latar lebih jelas (mirip Mapbox dark) */
+.tiles-legible { filter: brightness(1.45) contrast(0.92) saturate(1.25) hue-rotate(8deg); }
 .foto-slider { display:flex; height:100%; transition:transform .3s ease; }
 .foto-slide { min-width:100%; height:100%; overflow:hidden; flex-shrink:0; }
 .foto-slide img { width:100%; height:100%; object-fit:cover; display:block; }

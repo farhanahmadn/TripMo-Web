@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  *pengguna yang terdaftar di aplikasi.
  * Authenticatable biar bisa dipake untuk login/logout.
+ * HasApiTokens → token-based auth untuk mobile app (Flutter).
  */
 class User extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable, HasApiTokens;
 
     protected $table = 'users';
 

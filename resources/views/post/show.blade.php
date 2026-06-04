@@ -148,11 +148,12 @@ function setStar(val) {
 /* ── Inisialisasi peta ── */
 const detailMap = L.map('detail-map', { zoomControl: false });
 
-// Tile CartoDB Dark Matter — gratis tanpa API key
+// Tile CartoDB Dark Matter — gratis tanpa API key, dengan filter agar lebih jelas
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
     subdomains: 'abcd',
-    maxZoom: 20
+    maxZoom: 20,
+    className: 'tiles-legible'
 }).addTo(detailMap);
 
 L.control.zoom({ position: 'topright' }).addTo(detailMap);
