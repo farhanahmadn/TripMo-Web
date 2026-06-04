@@ -5,18 +5,6 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-if (str_contains($_SERVER['REQUEST_URI'] ?? '', 'whatami')) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? null,
-        'PATH_INFO'   => $_SERVER['PATH_INFO'] ?? null,
-        'SCRIPT_NAME' => $_SERVER['SCRIPT_NAME'] ?? null,
-        'x-now-route' => $_SERVER['HTTP_X_NOW_ROUTE_MATCHES'] ?? null,
-        'headers'     => array_filter($_SERVER, fn($k) => str_starts_with($k, 'HTTP_X_'), ARRAY_FILTER_USE_KEY),
-    ], JSON_PRETTY_PRINT);
-    exit;
-}
-
 /*
 |--------------------------------------------------------------------------
 | Penyesuaian Serverless (Vercel) — dijalankan untuk SEMUA request
