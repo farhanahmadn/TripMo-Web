@@ -22,10 +22,6 @@ if (
 putenv('LOG_CHANNEL=stderr');
 $_ENV['LOG_CHANNEL'] = $_SERVER['LOG_CHANNEL'] = 'stderr';
 
-/* DIAGNOSTIK SEMENTARA — tampilkan error asli */
-putenv('APP_DEBUG=true');
-$_ENV['APP_DEBUG'] = $_SERVER['APP_DEBUG'] = 'true';
-
 /* 3. Filesystem Vercel read-only kecuali /tmp.
 |     Buat struktur storage + bootstrap cache yang writable di /tmp. */
 $tmpStorage = '/tmp/storage';
