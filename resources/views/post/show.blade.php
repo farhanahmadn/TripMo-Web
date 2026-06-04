@@ -260,7 +260,7 @@ function tampilBadgeEstimasi() {
             color:#fbbf24; font-size:11px; font-weight:600; padding:6px 12px;
             border-radius:20px; backdrop-filter:blur(8px); pointer-events:none;`;
         badge.textContent = '〰 Jalur estimasi (off-road / pendakian)';
-        document.querySelector('.show-map').appendChild(badge);
+        document.querySelector('.show-right').appendChild(badge);
     }
     badge.style.display = 'block';
 }
@@ -288,6 +288,10 @@ if (dests.length > 0) {
 } else {
     detailMap.setView([-6.9, 107.6], 12);
 }
+
+/* Pastikan peta render penuh (terutama di mobile setelah layout berubah) */
+window.addEventListener('load', () => setTimeout(() => detailMap.invalidateSize(), 200));
+window.addEventListener('resize', () => detailMap.invalidateSize());
 
 /* Fokus ke titik saat item rute diklik */
 function focusMap(i) {

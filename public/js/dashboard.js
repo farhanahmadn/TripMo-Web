@@ -308,20 +308,27 @@ function tampilRute() {
     document.getElementById('lokasiUtama').value = dests.length > 0 ? dests[0].name : '';
 }
 
-function updatePeta() {
-    if (ruteLayer) map.removeLayer(ruteLayer);
+// Jarak lurus antar dua titik (km) — Haversine
+function _jarakLurusKm(a, b) {
+    const R = 6371,
+          dLat = (b[0] - a[0]) * Math.PI / 180,
+          dLng = (b[1] - a[1]) * Math.PI / 180,
+          x = Math.sin(dLat/2)**2 +
+              Math.cos(a[0]*Math.PI/180) * Math.cos(b[0]*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+function _totalLurusKm(pts) {
+    let t = 0;
+    for (let i = 0; i < pts.length - 1; i++) t += _jarakLurusKm(pts[i], pts[i+1]);
+    return t;
+}
+
+function _hapusRute() {
     map.eachLayer(l => { if (l._tripmo) map.removeLayer(l); });
-    if (dests.length === 0) return;
+    ruteLayer = null;
+}
 
-    const titik = dests.map(d => [d.lat, d.lng]);
-
-    // Shadow + garis utama — warna cerah agar kontras di dark tile
-    if (titik.length > 1) {
-        const shadow = L.polyline(titik, { color: '#818cf8', weight: 10, opacity: 0.18 }).addTo(map);
-        shadow._tripmo = true;
-        ruteLayer = L.polyline(titik, { color: '#818cf8', weight: 3.5, opacity: 1 }).addTo(map);
-    }
-
+function _gambarMarker() {
     dests.forEach((d, i) => {
         const isEnd = i === 0 || i === dests.length - 1;
         const warna = isEnd ? '#a78bfa' : '#818cf8';
@@ -338,9 +345,61 @@ function updatePeta() {
         const m = L.marker([d.lat, d.lng], { icon: ikon }).addTo(map);
         m._tripmo = true;
     });
+}
 
-    if (titik.length > 1) map.fitBounds(titik, { padding: [60, 60] });
-    else map.setView(titik[0], 13);
+// Garis putus-putus untuk jalur estimasi (pendakian / menyeberang laut)
+function _garisEstimasi(titik) {
+    const shadow = L.polyline(titik, { color: '#f59e0b', weight: 8, opacity: 0.15 }).addTo(map);
+    shadow._tripmo = true;
+    const line = L.polyline(titik, { color: '#f59e0b', weight: 3, opacity: 0.9, dashArray: '10 6' }).addTo(map);
+    line._tripmo = true;
+}
+
+// Garis mengikuti jalan (hasil routing OSRM)
+function _garisJalan(geojson) {
+    const shadow = L.geoJSON(geojson, { style: { color: '#4f46e5', weight: 9, opacity: 0.18 } }).addTo(map);
+    shadow._tripmo = true;
+    const line = L.geoJSON(geojson, { style: { color: '#6366f1', weight: 4, opacity: 0.95 } }).addTo(map);
+    line._tripmo = true;
+    ruteLayer = line;
+}
+
+let _ruteReqId = 0;
+
+async function updatePeta() {
+    _hapusRute();
+    if (dests.length === 0) return;
+
+    const titik = dests.map(d => [d.lat, d.lng]);
+    _gambarMarker();
+
+    if (titik.length > 1) {
+        const reqId  = ++_ruteReqId;
+        const coords = dests.map(d => `${d.lng},${d.lat}`).join(';');
+        const lurus  = _totalLurusKm(titik) || 0.0001;
+
+        try {
+            const res  = await fetch(`https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`);
+            const data = await res.json();
+            if (reqId !== _ruteReqId) return; // permintaan lebih baru sudah jalan
+
+            if (data.code === 'Ok' && data.routes.length) {
+                const osrmKm = data.routes[0].distance / 1000;
+                // Rute terlalu memutar (antar pulau / off-road) → garis putus estimasi
+                if (osrmKm / lurus > 3.5) _garisEstimasi(titik);
+                else                      _garisJalan(data.routes[0].geometry);
+            } else {
+                _garisEstimasi(titik);
+            }
+        } catch (e) {
+            if (reqId !== _ruteReqId) return;
+            _garisEstimasi(titik); // gagal routing → fallback garis lurus putus
+        }
+
+        map.fitBounds(titik, { padding: [60, 60] });
+    } else {
+        map.setView(titik[0], 13);
+    }
 }
 
 document.getElementById('pDestInput').addEventListener('keydown', e => {
@@ -380,3 +439,6 @@ function shareProfile() {
             alert("Gagal menyalin link");
         });
 }
+
+// Peta menyesuaikan saat ukuran layar / orientasi berubah (mobile)
+window.addEventListener('resize', () => { if (window.map || map) map.invalidateSize(); });
