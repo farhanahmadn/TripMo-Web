@@ -40,6 +40,20 @@ foreach ([
     }
 }
 
+/* DEBUG SEMENTARA — dump path yang diterima fungsi */
+if (str_contains($_SERVER['REQUEST_URI'] ?? '', 'whatami')) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'REQUEST_URI'    => $_SERVER['REQUEST_URI'] ?? null,
+        'PATH_INFO'      => $_SERVER['PATH_INFO'] ?? null,
+        'ORIG_PATH_INFO' => $_SERVER['ORIG_PATH_INFO'] ?? null,
+        'SCRIPT_NAME'    => $_SERVER['SCRIPT_NAME'] ?? null,
+        'QUERY_STRING'   => $_SERVER['QUERY_STRING'] ?? null,
+        'X_VERCEL_PATH'  => $_SERVER['HTTP_X_VERCEL_FORWARDED_FOR'] ?? null,
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
 require __DIR__ . '/vendor/autoload.php';
 
 $app = require_once __DIR__ . '/bootstrap/app.php';
