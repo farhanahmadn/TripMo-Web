@@ -60,6 +60,33 @@ foreach ([
     $_ENV[$__k] = $_SERVER[$__k] = $__v;
 }
 
+/* DEBUG SEMENTARA — healthcheck mentah sebelum Laravel boot. Hapus setelah selesai.
+|  Akses: /__health  (mem-bypass seluruh framework + middleware). */
+if (($_SERVER['REQUEST_URI'] ?? '') === '/__health' || strpos($_SERVER['REQUEST_URI'] ?? '', '/__health') === 0) {
+    header('Content-Type: text/plain');
+    $envFile = __DIR__ . '/../.env';
+    echo "ENV FILE on server: " . (file_exists($envFile) ? 'ADA' : 'TIDAK ADA') . "\n";
+    foreach (['APP_KEY', 'APP_ENV', 'APP_DEBUG', 'DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME'] as $k) {
+        $v = getenv($k);
+        echo str_pad($k, 16) . ": " . ($v === false ? '(KOSONG)' : ($k === 'APP_KEY' ? '(terisi, ' . strlen($v) . ' char)' : $v)) . "\n";
+    }
+    $ca = __DIR__ . '/../ca.pem';
+    echo "ca.pem            : " . (file_exists($ca) ? 'ADA' : 'TIDAK ADA') . "\n";
+    echo "pdo_mysql         : " . (extension_loaded('pdo_mysql') ? 'ADA' : 'TIDAK ADA') . "\n";
+    echo "----\n";
+    try {
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s', getenv('DB_HOST'), getenv('DB_PORT') ?: 3306, getenv('DB_DATABASE'));
+        $pdo = new PDO($dsn, getenv('DB_USERNAME'), getenv('DB_PASSWORD'), [
+            PDO::MYSQL_ATTR_SSL_CA => $ca,
+            PDO::ATTR_TIMEOUT => 10,
+        ]);
+        echo "PDO CONNECT       : OK -> " . $pdo->query('SELECT 1')->fetchColumn() . "\n";
+    } catch (\Throwable $e) {
+        echo "PDO ERROR         : " . $e->getMessage() . "\n";
+    }
+    exit;
+}
+
 require __DIR__ . '/../vendor/autoload.php';
 
 $app = require_once __DIR__ . '/../bootstrap/app.php';
