@@ -60,7 +60,8 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => str_replace('\\', '/', storage_path('ca.pem')),
+                // ca.pem di root project → base_path tidak terpengaruh useStoragePath('/tmp/storage') di Vercel.
+                PDO::MYSQL_ATTR_SSL_CA => str_replace('\\', '/', base_path('ca.pem')),
             ]) : [],
         ],
 

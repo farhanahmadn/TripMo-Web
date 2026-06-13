@@ -12,6 +12,26 @@ use App\Models\User;
 | Web Routes - Tripmo
 */
 
+// DEBUG SEMENTARA — hapus setelah selesai. Tampilkan status koneksi DB + config.
+Route::get('/db-check', function () {
+    header('Content-Type: text/plain');
+    $ca = config('database.connections.mysql.options.' . PDO::MYSQL_ATTR_SSL_CA);
+    echo "DB_HOST: " . config('database.connections.mysql.host') . "\n";
+    echo "DB_DATABASE: " . config('database.connections.mysql.database') . "\n";
+    echo "CA path: " . $ca . "\n";
+    echo "CA exists: " . (is_string($ca) && file_exists($ca) ? 'YES' : 'NO') . "\n";
+    echo "pdo_mysql loaded: " . (extension_loaded('pdo_mysql') ? 'YES' : 'NO') . "\n";
+    echo "----\n";
+    try {
+        $r = DB::select('SELECT 1 AS ok');
+        echo "DB CONNECT: OK -> " . json_encode($r) . "\n";
+    } catch (\Throwable $e) {
+        echo "DB ERROR: " . get_class($e) . "\n";
+        echo $e->getMessage() . "\n";
+    }
+    exit;
+});
+
 // Halaman utama → redirect ke login jika belum login, dashboard jika sudah
 Route::get('/', function () {
     if (auth()->check()) {
