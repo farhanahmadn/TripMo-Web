@@ -151,6 +151,47 @@ class PostApiController extends Controller
         ]);
     }
 
+    /** POST /api/posts/{id}/update — edit postingan */
+    public function update(Request $request, $id)
+    {
+        $post = Postingan::findOrFail($id);
+
+        if ($post->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Akses ditolak'], 403);
+        }
+
+        $destinations = $request->input('destinations', $post->destinations);
+        if (is_string($destinations)) {
+            $destinations = json_decode($destinations, true) ?? [];
+        }
+
+        $post->update([
+            'title'        => $request->title ?? $post->title,
+            'location'     => $request->location ?? $post->location,
+            'story'        => $request->story ?? $post->story,
+            'total_budget' => $request->total_budget ?? $post->total_budget,
+            'travel_date'  => $request->travel_date ?? $post->travel_date,
+            'destinations' => json_encode($destinations),
+        ]);
+
+        // Proses foto baru jika ada
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $file) {
+                $cloud = $this->cloudinary->upload($file, 'post_photos');
+                FotoPostingan::create([
+                    'travel_post_id' => $post->id,
+                    'file_path'      => $cloud ?: 'db',
+                ]);
+            }
+        }
+
+        $post->load(['user', 'photos']);
+        return response()->json([
+            'message' => 'Postingan diupdate',
+            'data'    => $this->postDetail($post),
+        ]);
+    }
+
     /* ── Transformers ── */
 
     private function postCard(Postingan $p): array

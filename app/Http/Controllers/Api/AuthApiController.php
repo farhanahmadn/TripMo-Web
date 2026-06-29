@@ -87,4 +87,36 @@ class AuthApiController extends Controller
             'photo' => $user->photo,
         ];
     }
+
+    /** POST /api/user/update — Update profil */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        
+        if ($request->has('name')) $user->name = $request->name;
+        if ($request->has('bio')) $user->bio = $request->bio;
+        
+        // Catatan: Jika ada upload foto profil, tambahkan logikanya di sini
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui',
+            'user'    => $this->userPayload($user)
+        ]);
+    }
+
+    /** DELETE /api/user — Hapus Akun */
+    public function destroyAccount(Request $request)
+    {
+        $user = $request->user();
+        
+        // Hapus token agar langsung logout
+        $user->tokens()->delete();
+        
+        // Hapus user dari database
+        $user->delete();
+
+        return response()->json(['message' => 'Akun berhasil dihapus permanen']);
+    }
 }
