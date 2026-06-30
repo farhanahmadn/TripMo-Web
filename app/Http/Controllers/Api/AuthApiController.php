@@ -93,11 +93,22 @@ class AuthApiController extends Controller
     {
         $user = $request->user();
         
-        if ($request->has('name')) $user->name = $request->name;
-        if ($request->has('bio')) $user->bio = $request->bio;
+        // 1. Tambahkan Validasi: Pastikan nama berupa string dan maksimal 100 karakter
+        $request->validate([
+            'name' => 'sometimes|required|string|max:100',
+            'bio'  => 'nullable|string|max:255',
+        ]);
         
-        // Catatan: Jika ada upload foto profil, tambahkan logikanya di sini
+        // 2. Update field jika ada di dalam request
+        if ($request->has('name')) {
+            $user->name = $request->name;
+        }
 
+        if ($request->has('bio')) {
+            $user->bio = $request->bio;
+        }
+
+        // Menyimpan perubahan ke dalam database
         $user->save();
 
         return response()->json([
@@ -111,12 +122,15 @@ class AuthApiController extends Controller
     {
         $user = $request->user();
         
-        // Hapus token agar langsung logout
+        // 1. Hapus token agar langsung logout
         $user->tokens()->delete();
         
-        // Hapus user dari database
+        // 2. Hapus user dari database
         $user->delete();
 
-        return response()->json(['message' => 'Akun berhasil dihapus permanen']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Akun berhasil dihapus permanen'
+        ]);
     }
 }
